@@ -1,0 +1,31 @@
+{{- if or .Values.db.hostAddress .Values.db.disablePVC }}
+{{ else }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: 
+    {{ if and .Release.IsUpgrade .Values.db.restoreSnapshotSuffix }}
+    determined-db-pvc-{{ .Values.db.restoreSnapshotSuffix }}
+    {{- else -}}
+    determined-db-pvc-{{ .Release.Name }}
+    {{ end }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: determined-db-{{ .Release.Name }}
+    release: {{ .Release.Name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if and .Release.IsUpgrade  .Values.db.restoreSnapshotSuffix }}
+  dataSource:
+    name: determined-db-snapshot-{{ .Values.db.restoreSnapshotSuffix }}
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  {{ end }}
+  resources:
+    requests:
+      storage: {{ required  "A valid Values.db.storageSize entry is required!" .Values.db.storageSize }}
+  {{- if .Values.db.storageClassName }}
+  storageClassName: {{ .Values.db.storageClassName }}
+  {{ end }}
+{{ end }}
